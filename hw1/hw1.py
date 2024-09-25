@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as et
+import streamlit as st
 import os
 import re
 import shutil
@@ -7,35 +8,53 @@ def searchtitle(keyword, color):
     result = []
     file_name = []
     orig = []
+    count = []
     path = '/bir/pubmed/tumor/xml'
     lower_keyword = keyword.lower()
 
     for file in os.listdir(path):
-        # read xml
-        file_path = os.path.join(path, file)
-        tree = et.parse(file_path)
+        tmp = file.split(".")
+        if tmp[1] == "xml":
+            # read xml
+            file_path = os.path.join(path, file)
+            tree = et.parse(file_path)
 
-        # get articletitle
-        root = tree.getroot()
-        title = root.find(".//ArticleTitle").text
-        lower_title = title.lower()
-        lower_title = lower_title.replace('-', ' ')
+            # get articletitle
+            root = tree.getroot()
+            title = root.find(".//ArticleTitle").text
+            lower_title = title.lower()
+            lower_title = lower_title.replace('-', ' ')
 
-        # remove punctuation
-        rmv = re.sub(r'[^\w\s]', '', lower_title)
-        # print(rmv)
+            # get articleabstract
+            _, _, abstracts = extractcontent(file)
 
-        if lower_keyword in rmv:
-            highlight = re.sub(f"{keyword}", 
-                               lambda m: f'<span style="color:{color}">{m.group(0)}</span>', 
-                               title, 
-                               flags = re.IGNORECASE)
+            # remove punctuation
+            rmv = re.sub(r'[^\w\s]', '', lower_title)
+            # print(rmv)
 
-            result.append(highlight)
-            file_name.append(file)
-            orig.append(title)
+            if lower_keyword in rmv:
+                tmp_count = rmv.lower().count(lower_keyword)
+                highlight = re.sub(f"{keyword}", 
+                                lambda m: f'<span style="color:{color}">{m.group(0)}</span>', 
+                                title, 
+                                flags = re.IGNORECASE)
 
-    return result, file_name, orig
+                result.append(title)
+                file_name.append(file)
+                continue
+                #file_name.append(file)
+                #orig.append(title)
+                #count.append(tmp_count)
+            for abstract in abstracts:
+                content = ''.join(abstract.itertext())
+                lower_content = content.lower()
+                if lower_keyword in lower_content:
+                    result.append(title)
+                    file_name.append(file)
+                    break
+
+    #return result, file_name, orig, count
+    return result, file_name
 
 def extractcontent(file_name):
     path = '/bir/pubmed/tumor/xml'
@@ -78,6 +97,29 @@ def uploadfile(file):
     with open(tmp_save_path, "wb") as f:
         f.write(file.getbuffer())
     shutil.copy(tmp_save_path, target)
+
+def showlist():
+    path = "/bir/pubmed/tumor/xml"
+    files = os.listdir(path)
+
+    for file_name in files:
+        file_path = os.path.join(path, file_name)
+        
+        # Parse and display the XML file content
+        try:
+            tree = et.parse(file_path)
+            root = tree.getroot()
+            st.write(f"**XML File: {file_name}**")
+            # st.write(ET.tostring(root, encoding='unicode'))
+        except et.ParseError:
+            st.write(f"**Other file: {file_name}**")
+
+def highlight(input_str, keyword, color):
+    res = re.sub(f"{keyword}", 
+                lambda m: f'<span style="color:{color}">{m.group(0)}</span>', 
+                input_str, 
+                flags = re.IGNORECASE)
+    return res
 # 提取 PMID
 # pmid = root.find(".//PMID").text
 # print(f"PMID: {pmid}")

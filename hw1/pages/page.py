@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
-from hw1 import extractcontent, statistic
+from hw1 import *
+import re
 
 st.set_page_config(
     page_title = "page1",
@@ -9,12 +10,16 @@ st.set_page_config(
 
 #st.title("This is content in the file")
 file_name = st.query_params["name"]
+keyword = st.query_params["keyword"]
+color = st.query_params["color"]
 #st.write(file_name)
 # tmp = st.session_state["file_name"]
 title, journal, abstracts = extractcontent(file_name)
 
 #st.write(title)
-st.markdown(f"<h1 style='text-align: center; color: red;'>{title}</h1>", unsafe_allow_html=True)
+hightlight_title = highlight(title, keyword, color)
+#st.markdown(f"<h1 style='text-align: center; color: red;'>{title}</h1>", unsafe_allow_html=True)
+st.markdown(f"{hightlight_title}", unsafe_allow_html=True)
 #st.write(journal)
 
 sentence_cnt = 0
@@ -24,7 +29,9 @@ ascii_cnt = 0
 
 for abstract in abstracts:
     content = ''.join(abstract.itertext())
-    st.write(content)
+    highlight_content = highlight(content, keyword, color)
+    st.markdown(f"{highlight_content}", unsafe_allow_html=True)
+    #st.write(content)
     s_tmp, w_tmp, l_tmp, a_tmp = statistic(content)
     sentence_cnt += s_tmp
     word_cnt += w_tmp
